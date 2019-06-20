@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>信科校园导游系统</title>
+    <style type="text/css" rel="stylesheet">
+        #container {
+            padding: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #graph {
+            background: #eee;
+            border: 1px solid #666;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body id="container">
+
+<canvas id="graph" width="840" height="840"></canvas>
+
+<script src="./scripts/jquery-3.4.1.js"></script>
+<script src="./scripts/jcanvas.js"></script>
+<script>
+    $(document).ready(function () {
+
+        const cav = $('#graph')
+
+        let weight = 84
+
+        for (let i = 1; i < 10; i++) {
+
+            //绘制行
+            cav.drawLine({
+                strokeStyle: '#666',
+                strokeWidth: 1,
+                rounded: true,
+                x1: 0, y1: i * weight,
+                x2: 840, y2: i * weight
+            })
+
+            //绘制列
+            cav.drawLine({
+                strokeStyle: '#666',
+                strokeWidth: 1,
+                rounded: true,
+                x1: i * weight, y1: 0,
+                x2: i * weight, y2: 840
+            })
+        }
+
+        //初始化图
+        //测试数据
+
+
+    });
+</script>
+</body>
+</html>
