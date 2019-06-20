@@ -5,11 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>信科校园导游系统</title>
+    <link rel="stylesheet" type="text/css" href="./plugins/bootstrap-4.0.0-dist/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="./plugins/layer/theme/default/layer.css">
     <style type="text/css" rel="stylesheet">
         #container {
             padding: 50px;
             display: flex;
-            align-items: center;
+            align-items: start;
             justify-content: center;
         }
 
@@ -18,47 +20,438 @@
             border: 1px solid #666;
             border-radius: 5px;
         }
+
+        .options-1 {
+            width: 320px;
+            height: auto;
+            padding: 10px;
+            border-radius: 5px;
+            background: #eeeeee;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body id="container">
-
+<div>
+    <div class="options-1">
+        <form id="position-form">
+            <div class="form-group">
+                <label for="id">ID</label>
+                <input type="number" class="form-control" name="id" id="id">
+            </div>
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" class="form-control" name="name" id="name">
+            </div>
+            <div class="form-group">
+                <label for="x">X</label>
+                <input type="number" class="form-control" name="x" id="x">
+            </div>
+            <div class="form-group">
+                <label for="y">Y</label>
+                <input type="number" class="form-control" name="y" id="y">
+            </div>
+            <a id="p-submit" class="btn btn-primary">添加导航点</a>
+            <a id="p-remove" class="btn btn-danger">删除导航点</a>
+        </form>
+    </div>
+    <div class="options-1" style="margin-top: 5px;">
+        <form id="edge-form">
+            <div class="form-group">
+                <label for="v0">V0</label>
+                <input type="number" class="form-control" id="v0" name="v0">
+            </div>
+            <div class="form-group">
+                <label for="v1">V1</label>
+                <input type="text" class="form-control" id="v1" name="v1">
+            </div>
+            <div class="form-group">
+                <label for="weight">权值</label>
+                <input type="number" class="form-control" name="weight" id="weight">
+            </div>
+            <a id="e-submit" class="btn btn-primary">添加边</a>
+            <a id="e-remove" class="btn btn-danger">删除边</a>
+        </form>
+    </div>
+    <div class="options-1" style="margin-top: 5px;">
+        <form id="dji-form">
+            <div class="form-group">
+                <label for="v0">V0</label>
+                <input type="number" class="form-control" id="start" name="start">
+            </div>
+            <div class="form-group">
+                <label for="v1">V1</label>
+                <input type="number" class="form-control" id="end" name="end">
+            </div>
+            <a id="d-submit" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalCenter">获取最短路径</a>
+        </form>
+    </div>
+</div>
 <canvas id="graph" width="840" height="840"></canvas>
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">最短路径</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>最短路径长度为: <span id="shortest-len"></span></p>
+                <p>最短路径为: <span id="shortest-lin"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">知道了</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="./scripts/jquery-3.4.1.js"></script>
 <script src="./scripts/jcanvas.js"></script>
+<script src="./plugins/bootstrap-4.0.0-dist/js/bootstrap.js"></script>
+<script src="./plugins/layer/layer.js"></script>
 <script>
     $(document).ready(function () {
 
-        const cav = $('#graph')
+            const cav = $('#graph')
 
-        let weight = 84
+            const server = 'http://localhost:8081'
 
-        for (let i = 1; i < 10; i++) {
+            const INFINITY = 999;
 
-            //绘制行
-            cav.drawLine({
-                strokeStyle: '#666',
-                strokeWidth: 1,
-                rounded: true,
-                x1: 0, y1: i * weight,
-                x2: 840, y2: i * weight
+            let graph = {}
+
+            let weight = 84
+
+
+            //测试数据
+            let data = {
+                "ps": [{"id": 0, "name": "一食堂", "x": 4, "y": 6},
+                    {"id": 1, "name": "二食堂", "x": 1, "y": 1},
+                    {"id": 2, "name": "图书馆", "x": 2, "y": 4},
+                    {"id": 3, "name": "6号公寓", "x": 3, "y": 4},
+                    {"id": 4, "name": "行政楼", "x": 4, "y": 4}],
+                "maxVerNum": 6
+            };
+            //初始化图
+            $.ajax({
+                url: server + '/guide/graph',
+                contentType: 'application/json',
+                type: 'POST',
+                data: JSON.stringify(data)
+            }).then(res => {
+                graph = res.data
+                console.log(graph)
+
+                refreshGraph(graph.vertexes, graph.arcs, graph.verNum, graph.arcNum)
+
             })
 
-            //绘制列
-            cav.drawLine({
-                strokeStyle: '#666',
-                strokeWidth: 1,
-                rounded: true,
-                x1: i * weight, y1: 0,
-                x2: i * weight, y2: 840
+            //添加点
+            $('#p-submit').on('click', function () {
+                let params = $('#position-form').serializeArray()
+                let data = transferData(params)
+                if (data !== null && data !== undefined) {
+                    insertPoint(data)
+                }
             })
+
+            //删除点
+            $('#p-remove').on('click', function () {
+                let data = transferData($('#position-form').serializeArray())
+                if (data !== null && data !== undefined) {
+                    removePoint(data)
+                }
+            })
+
+            //添加边
+            $('#e-submit').on('click', function () {
+                let data = transferData($('#edge-form').serializeArray())
+                if (data === null || data.v0 === '' || data.v1 === '' || data.weight === '') {
+                    layer.alert('请完善数据')
+                    return false
+                }
+                insertEdge(data)
+            })
+
+            //删除边
+            $('#e-remove').on('click', function () {
+                let data = transferData($('#edge-form').serializeArray())
+                console.log(data)
+                if (data === null || data.v0 === '' || data.v1 === '') {
+                    layer.alert('请完善数据')
+                    return false
+                }
+                removeEdge(data)
+            })
+
+            //获取最短路径
+            $('#d-submit').on('click', function () {
+                let data = transferData($('#dji-form').serializeArray())
+                if (data === null || data.v0 === '' || data.v1 === '') {
+                    layer.alert('请完善数据')
+                    return false
+                }
+                console.log(data)
+                getShortestLine(data.start, data.end)
+                getShortestLength(data.start, data.end)
+            })
+
+            /**
+             * 向服务器添加一个点
+             */
+            function insertPoint(point) {
+                $.ajax({
+                    url: server + '/guide/positions',
+                    contentType: 'application/json',
+                    type: 'POST',
+                    data: JSON.stringify(point)
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        let data = res.data
+                        refreshGraph(data.vertexes, data.arcs, res.data.verNum, res.data.arcNum)
+                    }
+                    layer.msg(res.msg)
+                })
+            }
+
+            /**
+             * 向服务器请求删除一个点
+             */
+            function removePoint(point) {
+                $.ajax({
+                    url: server + '/guide/positions',
+                    contentType: 'application/json',
+                    type: 'DELETE',
+                    data: JSON.stringify(point)
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        refreshGraph(res.data.vertexes, res.data.arcs, res.data.verNum, res.data.arcNum)
+                    }
+                    layer.msg(res.msg)
+                })
+            }
+
+            /**
+             * 向服务器请求添加一条边
+             */
+            function insertEdge(edge) {
+                $.ajax({
+                    url: server + '/guide/edges',
+                    contentType: 'application/json',
+                    type: 'POST',
+                    data: JSON.stringify(edge)
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        refreshGraph(res.data.vertexes, res.data.arcs, res.data.verNum, res.data.arcNum)
+                    }
+                    layer.msg(res.msg)
+                })
+            }
+
+            /**
+             * 向服务器请求删除一条边
+             */
+            function removeEdge(edge) {
+                $.ajax({
+                    url: server + '/guide/edges',
+                    contentType: 'application/json',
+                    type: 'DELETE',
+                    data: JSON.stringify(edge)
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        refreshGraph(res.data.vertexes, res.data.arcs, res.data.verNum, res.data.arcNum)
+                    }
+                    layer.msg(res.msg)
+                })
+            }
+
+            /**
+             * 获取最短路径
+             */
+            function getShortestLength(v0, v1) {
+                $.ajax({
+                    url: server + '/guide/dist/' + v0 + "/" + v1,
+                    contentType: 'application/json',
+                    type: 'GET'
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        $('#shortest-len').html(res.data)
+                    } else {
+
+                        layer.msg(res.msg)
+                    }
+                })
+            }
+
+            /**
+             * 获取最短路线
+             */
+            function getShortestLine(v0, v1) {
+                $.ajax({
+                    url: server + '/guide/line/' + v0 + "/" + v1,
+                    contentType: 'application/json',
+                    type: 'GET'
+                }).then(res => {
+                    console.log(res)
+                    if (res.status === 0) {
+                        let line = res.data
+                        let str = "";
+                        for (let i = 0; i < line.length; i++) {
+                            if (i !== line.length - 1) {
+                                str = str + line[i] + "-->"
+                            } else {
+                                str += line[i];
+                            }
+                        }
+                        $('#shortest-lin').html(str)
+                    } else {
+
+                        layer.msg(res.msg)
+                    }
+                })
+            }
+
+            /**
+             * 绘制点
+             * @param points
+             * @param verNum
+             */
+            function renderPoints(points, verNum) {
+                for (let i = 0; i < verNum; i++) {
+                    let p = points[i];
+                    if (p !== null) {
+                        cav.drawArc({
+                            fillStyle: 'orangered',
+                            x: p.x * weight,
+                            y: p.y * weight,
+                            radius: 10
+                        }).drawText({
+                            fillStyle: 'orangered',
+                            strokeWidth: 1,
+                            x: p.x * weight,
+                            y: p.y * weight - 0.25 * weight,
+                            text: p.name,
+                            fontSize: '10pt',
+                            fromCenter: true
+                        }).drawText({
+                            fillStyle: 'orangered',
+                            strokeWidth: 1,
+                            x: p.x * weight,
+                            y: p.y * weight + 0.25 * weight,
+                            text: i,
+                            fontSize: '10pt',
+                            fromCenter: true
+                        })
+                    }
+                }
+            }
+
+            /**
+             * 绘制边
+             * @param arcs
+             * @param vertexes
+             * @param verNum
+             * @param arcNum
+             */
+            function renderLine(vertexes, arcs, verNum, arcNum) {
+                for (let i = 0; i < verNum; i++) {
+                    for (let j = 0; j < verNum; j++) {
+                        let w = arcs[i][j]
+                        if (w > 0 && w < INFINITY) {
+                            let p1 = vertexes[i]
+                            let p2 = vertexes[j]
+                            console.log(p1, p2)
+                            cav.drawLine({
+                                strokeStyle: 'orangered',
+                                strokeWidth: 1,
+                                rounded: true,
+                                x1: p1.x * weight, y1: p1.y * weight,
+                                x2: p2.x * weight, y2: p2.y * weight
+                            }).drawText({
+                                fillStyle: 'orangered',
+                                strokeWidth: 1,
+                                x: p1.x > p2.x ? (((p1.x - p2.x) / 2 + p2.x) * weight) : (((p2.x - p1.x) / 2 + p1.x) * weight),
+                                y: p1.y > p2.y ? (((p1.y - p2.y) / 2 + p2.y) * weight) : (((p2.y - p1.y) / 2 + p1.y) * weight),
+                                text: w,
+                                fontSize: '10pt',
+                                fromCenter: true
+                            })
+                        }
+
+                    }
+
+                }
+            }
+
+            /**
+             * 绘制网格
+             */
+            function renderGrid() {
+                for (let i = 1; i < 10; i++) {
+
+                    //绘制行
+                    cav.drawLine({
+                        strokeStyle: '#666',
+                        strokeWidth: 1,
+                        rounded: true,
+                        x1: 0, y1: i * weight,
+                        x2: 840, y2: i * weight
+                    })
+
+                    //绘制列
+                        .drawLine({
+                            strokeStyle: '#666',
+                            strokeWidth: 1,
+                            rounded: true,
+                            x1: i * weight, y1: 0,
+                            x2: i * weight, y2: 840
+                        })
+                }
+            }
+
+            /**
+             * 刷新图
+             */
+            function refreshGraph(vertexes, arcs, verNum, arcNum) {
+                cav.clearCanvas()
+                renderGrid()
+                renderPoints(vertexes, verNum)
+                renderLine(vertexes, arcs, verNum, arcNum)
+            }
+
+            /**
+             * 数组转对象
+             * @param arr
+             */
+            function transferData(arr) {
+                let obj = {}
+                for (let item in arr) {
+                    if (arr[item].name === 'name' && arr[item].value === '') {
+                        layer.msg('请输入name')
+                        return
+                    }
+                    if (arr[item].name === 'id' && arr[item].value === '') {
+                        layer.msg('请输入id')
+                        return
+                    }
+                    obj[arr[item].name] = arr[item].value;
+                }
+                return obj;
+            }
+
         }
-
-        //初始化图
-        //测试数据
-
-
-    });
+    );
 </script>
 </body>
 </html>
